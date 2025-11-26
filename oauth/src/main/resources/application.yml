@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521/xe
+    username: oauth
+    password: 1234
+    driver-class-name: oracle.jdbc.OracleDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: none   # 운영 수준. 개발 중이면 update 가능
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+
+logging:
+  level:
+    org.springframework.security: INFO
+
