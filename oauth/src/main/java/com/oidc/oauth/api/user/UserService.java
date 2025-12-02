@@ -1,21 +1,31 @@
 package com.oidc.oauth.api.user;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-@Service
-public class UserService {
+@Component
+@RequiredArgsConstructor
+@Slf4j
+@Transactional
+public class UserService implements UserDetailsService {
     private final UserRepository repo;
 
-    public UserService(UserRepository repo) {
-        this.repo = repo;
-    }
+    @Override
+    public UserDetails loadUserByUsername(String loginId) throws UsernameNotFoundException {
+        User user = repo.findByLoginId(loginId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + loginId));
 
-    public void createUser(String name) {
-
-    }
-
-    public void getUSer() {
-
+        return org.springframework.security.core.userdetails.User
+                .withUsername(user.getName())
+                .password(user.getPassword())
+                .roles(user.getRole())
+                .build();
     }
 
     public Iterable<User> getUsers() {

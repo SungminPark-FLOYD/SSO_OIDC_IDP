@@ -1,14 +1,13 @@
 package com.oidc.oauth.api.client;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "OAUTH_CLIENT")
+@Getter
 public class OAuthClient {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "client_seq_gen")
@@ -27,13 +26,18 @@ public class OAuthClient {
 
     private String clientName;
 
-    private String redirectUri; // 콤마로 여러 URI 구분 가능
+    private String redirectUri; // 콤마로 여러 URI 구분
+
+    private String postLogoutRedirectUri; //로그아웃 url
 
     private String scopes; // 예: "openid,profile,email"
 
     private String authorizedGrantTypes; // 예: "authorization_code,refresh_token"
 
     private Integer tokenTtl = 3600;
+
+    @Column(name = "IS_REQUIRE_AUTH_CONSENT")
+    private boolean isRequireAuthorizationConsent = true;
 
     @Column(name = "CREATED_AT")
     private LocalDateTime createdAt = LocalDateTime.now();

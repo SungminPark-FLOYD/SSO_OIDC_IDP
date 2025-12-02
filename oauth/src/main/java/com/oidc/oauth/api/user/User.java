@@ -1,10 +1,13 @@
 package com.oidc.oauth.api.user;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "USERS")
+@Getter
 public class User {
 
     @Id
@@ -25,6 +28,8 @@ public class User {
     private String name;
 
     private String email;
+
+    private String role;
 
     private boolean enabled = true;
 
