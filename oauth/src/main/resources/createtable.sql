@@ -51,3 +51,40 @@ BEGIN
     SELECT SEQ_USERS.NEXTVAL INTO :NEW.USER_ID FROM DUAL;
 END;
 /
+
+
+-- 1. 사용자 추가 (ID: user1, PW: password)
+-- BCrypt Hash: $2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRkgVKhW/yCkIhd8/..
+INSERT INTO USERS (USER_ID, LOGIN_ID, PASSWORD, NAME, ROLE, ENABLED, CREATED_AT)
+VALUES (1, 'user1', '{bcrypt}$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', '홍길동', 'USER', 1, SYSDATE);
+
+select * from USERS;
+select * from OAUTH_CLIENT;
+-- 2. 클라이언트 추가 (ID: oidc-client, Secret: secret)
+-- Redirect URI는 로컬 테스트용으로 설정함
+INSERT INTO OAUTH_CLIENT (
+    ID,
+    CLIENT_ID,
+    CLIENT_SECRET,
+    CLIENT_NAME,
+    REDIRECT_URI,
+    SCOPES,
+    AUTHORIZED_GRANT_TYPES,
+    TOKEN_TTL,
+    IS_REQUIRE_AUTH_CONSENT,
+    CREATED_AT
+) VALUES (
+             2,
+             'test-client',
+             '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG',
+             'test',
+             'http://localhost:40001/callback',
+             'openid,profile,email',
+             'authorization_code,refresh_token',
+             3600,
+             1,
+             SYSDATE
+         );
+
+ALTER TABLE oauth_client
+    ADD post_logout_redirect_uri VARCHAR2(4000);
