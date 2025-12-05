@@ -133,25 +133,35 @@ public class AuthController {
     @GetMapping("/callback")
     public ResponseEntity<String> callback(@RequestParam("code") String code) {
 
+        // 1. Client ID와 Secret 설정 (하드코딩 대신 설정 파일에서 읽어오는 것을 권장)
+        final String clientId = "test-client";
+        final String clientSecret = "secret";
+
         System.out.println("받은 Authorization Code = " + code);
 
-        // 1. Token 요청 준비
+        // 2. Base64 인코딩을 통한 Basic Authentication Header 생성
+        String authString = clientId + ":" + clientSecret;
+        String encodedAuth = java.util.Base64.getEncoder().encodeToString(authString.getBytes());
+        String authHeader = "Basic " + encodedAuth;
+
+        // 3. Token 요청 준비 (Basic Auth 헤더 포함)
         RestTemplate rest = new RestTemplate();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        // Authorization Header 추가
+        headers.set("Authorization", authHeader);
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
         params.add("code", code);
-        params.add("redirect_uri", "http://localhost:40001/callback");   // 반드시 동일해야 함
-        params.add("client_id", "test-client");
-        params.add("client_secret", "secret");                      // 네 Authorization Server 설정
+        params.add("redirect_uri", "http://localhost:40001/callback"); // 반드시 동일해야 함
+
 
         HttpEntity<MultiValueMap<String, String>> request =
                 new HttpEntity<>(params, headers);
 
-        // 2. 토큰 엔드포인트 호출
+        // 4. 토큰 엔드포인트 호출
         ResponseEntity<String> response = rest.postForEntity(
                 "http://localhost:40001/oauth2/token",
                 request,
@@ -160,7 +170,7 @@ public class AuthController {
 
         System.out.println("Token Response = " + response.getBody());
 
-        // 3. 결과 반환
+        // 5. 결과 반환
         return response;
     }
 }

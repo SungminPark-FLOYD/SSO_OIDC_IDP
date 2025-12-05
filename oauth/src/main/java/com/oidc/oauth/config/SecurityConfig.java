@@ -15,12 +15,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.oauth2.core.AuthorizationGrantType;
-import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
-import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
@@ -28,8 +22,6 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
-import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
@@ -53,21 +45,22 @@ public class SecurityConfig {
     private final OAuthClientService oAuthClientService;
 
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        List<String> originUris = oAuthClientService.getOriginUris();
-        originUris.forEach(config::addAllowedOrigin);
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("POST");
-        config.addAllowedMethod("GET");
-        config.setAllowCredentials(true);
+//    @Bean
+//    public CorsConfigurationSource corsConfigurationSource() {
+//        CorsConfiguration config = new CorsConfiguration();
+//        List<String> originUris = oAuthClientService.getOriginUris();
+//        originUris.forEach(config::addAllowedOrigin);
+//        config.addAllowedHeader("*");
+//        config.addAllowedMethod("POST");
+//        config.addAllowedMethod("GET");
+//        config.setAllowCredentials(true);
+//
+//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+//        source.registerCorsConfiguration("/**", config);
+//
+//        return source;
+//    }
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-
-        return source;
-    }
     @Bean
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
@@ -76,41 +69,27 @@ public class SecurityConfig {
                 OAuth2AuthorizationServerConfigurer.authorizationServer();
 
         http
-                .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
-                .with(authorizationServerConfigurer, (authorizationServer) ->
-                        authorizationServer
-                                .oidc(Customizer.withDefaults())	// Enable OpenID Connect 1.0
-                )
-                .authorizeHttpRequests((authorize) ->
-                        authorize
-                                .anyRequest().authenticated()
-                )
-                // Redirect to the login page when not authenticated from the
-                // authorization endpoint
-                .exceptionHandling((exceptions) -> exceptions
-                        .defaultAuthenticationEntryPointFor(
-                                new LoginUrlAuthenticationEntryPoint("/login"),
-                                new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
-                        )
-                );
+            .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
+            .with(authorizationServerConfigurer, (authorizationServer) ->
+                authorizationServer
+                        .oidc(Customizer.withDefaults())   // Enable OpenID Connect 1.0
+            )
+            // OAuth2 Resource Server로도 동작 (JWT 검증)
+            .oauth2ResourceServer((resourceServer) -> resourceServer
+                    .jwt(Customizer.withDefaults()))
+            .authorizeHttpRequests((authorize) -> authorize
+                    .anyRequest().authenticated()
+            )
+            // 인증되지 않은 요청은 로그인 페이지로 리다이렉트
+            .exceptionHandling((exceptions) -> exceptions
+                    .defaultAuthenticationEntryPointFor(
+                            new LoginUrlAuthenticationEntryPoint("/login"),
+                            new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
+                    )
+            );
 
         return http.build();
     }
-
-//    @Bean
-//    @Order(2)
-//    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http)
-//            throws Exception {
-//        http
-//                .authorizeHttpRequests((authorize) -> authorize
-//                        .anyRequest().authenticated()
-//                )
-//                // Form login handles the redirect to the login page from the
-//                // authorization server filter chain
-//                .formLogin(Customizer.withDefaults());
-//
-//        return http.build();
-//    }
 
     @Bean
     @Order(2)
@@ -118,38 +97,27 @@ public class SecurityConfig {
             throws Exception {
         http
                 .authorizeHttpRequests((authorize) -> authorize
-                        .requestMatchers("/login", "/signup", "/forgot-password/**", "/css/**", "/js/**", "/error").permitAll()
-                        .requestMatchers("/oauth2/**", "/oauth/**").permitAll()
+                        .requestMatchers("/error","/login", "/signup", "/forgot-password/**", "/css/**", "/js/**", "/error").permitAll()
                         .requestMatchers("/callback", "/logout").permitAll()
                         .anyRequest().authenticated()
                 )
-                .oauth2ResourceServer((resourceServer) -> resourceServer.jwt(Customizer.withDefaults()))
                 .formLogin(form -> form
                         .loginPage("/login")  // 커스텀 로그인 페이지
                         .loginProcessingUrl("/login") // POST 요청 → Spring Security가 처리
-                        .defaultSuccessUrl("/home", false)   // 로그인 성공 시 이동할 페이지
+                        //.defaultSuccessUrl("/home", true)   // 로그인 성공 시 이동할 페이지
                         .permitAll()
                 );
 
         return http.build();
     }
 
-//    @Bean
-//    public UserDetailsService userDetailsService() {
-//        UserDetails userDetails = User.withDefaultPasswordEncoder()
-//                .username("user")
-//                .password("password")
-//                .roles("USER")
-//                .build();
-//
-//        return new InMemoryUserDetailsManager(userDetails);
-//    }
-
     @Bean
     public RegisteredClientRepository registeredClientRepository() {
         return new RegisteredClientRepository() {
             @Override
             public void save(RegisteredClient registeredClient) {
+                // 메모리 기반 저장소에 클라이언트 저장
+                new InMemoryRegisteredClientRepository(registeredClient);
             }
 
             @Override
@@ -164,6 +132,10 @@ public class SecurityConfig {
         };
     }
 
+    /**
+     * Access Token을 JWT 형식으로 발급할 때 서명에 사용할 키를 제공합니다.
+     * RSA 키쌍(공개키/비밀키)을 생성하여 사용합니다.
+     */
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
         KeyPair keyPair = generateRsaKey();
@@ -176,7 +148,9 @@ public class SecurityConfig {
         JWKSet jwkSet = new JWKSet(rsaKey);
         return new ImmutableJWKSet<>(jwkSet);
     }
-
+    /**
+     * RSA 키쌍 생성 헬퍼 메서드
+     */
     private static KeyPair generateRsaKey() {
         KeyPair keyPair;
         try {
@@ -189,12 +163,17 @@ public class SecurityConfig {
         }
         return keyPair;
     }
-
+    /**
+     * 발급된 JWT 토큰을 검증하고 디코딩하는 데 사용됩니다.
+     */
     @Bean
     public JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
         return OAuth2AuthorizationServerConfiguration.jwtDecoder(jwkSource);
     }
 
+    /**
+     * 인증 서버의 엔드포인트 URL 등을 설정합니다.
+     */
     @Bean
     public AuthorizationServerSettings authorizationServerSettings() {
         return AuthorizationServerSettings.builder().build();
